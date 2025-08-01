@@ -13,7 +13,6 @@ class Settings:
     OPENAI_MAX_TOKENS: int = int(os.getenv("OPENAI_MAX_TOKENS", "500"))
     OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
     
-    
     # API Configuration
     APP_NAME: str = os.getenv("APP_NAME", "Travel Buddy API")
     VERSION: str = os.getenv("VERSION", "1.0.0")

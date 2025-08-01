@@ -3,7 +3,7 @@ from models import ItineraryRequest
 from config import settings
 
 try:
-    from openai import OpenAI
+    from openai import OpenAI # Ensure OpenAI package is installed
 except ImportError:
     OpenAI = None
 
@@ -16,7 +16,7 @@ async def generate_itinerary(request: ItineraryRequest) -> str:
         f"with a budget of {request.budget} USD for the dates {request.dates}. "
         "Include daily activities, recommended restaurants, attractions, and budget breakdown."
     )
-    
+    #we are using same api for both openai and static response this for testing perpose
     if request.model == "openai":
         return await _generate_with_openai(prompt)
     else:
@@ -64,7 +64,6 @@ def _generate_static_response(request: ItineraryRequest) -> str:
     🌍 Travel Itinerary for {request.destination}
     📅 Dates: {request.dates}
     💰 Budget: ${request.budget} USD
-    
     Day 1: Arrival & City Exploration
     - Morning: Airport transfer and hotel check-in
     - Afternoon: Walking tour of city center
