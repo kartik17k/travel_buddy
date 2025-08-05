@@ -13,6 +13,12 @@ class Settings:
     OPENAI_MAX_TOKENS: int = int(os.getenv("OPENAI_MAX_TOKENS", "500"))
     OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
     
+    # Groq Configuration
+    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+    GROQ_MAX_TOKENS: int = int(os.getenv("GROQ_MAX_TOKENS", "1000"))
+    GROQ_TEMPERATURE: float = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
+    
     # API Configuration
     APP_NAME: str = os.getenv("APP_NAME", "Travel Buddy API")
     VERSION: str = os.getenv("VERSION", "1.0.0")

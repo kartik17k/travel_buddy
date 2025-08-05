@@ -19,5 +19,4 @@ async def health_check():
 @app.post("/generate_itinerary", response_model=ItineraryResponse)
 async def generate_itinerary_endpoint(request: ItineraryRequest):
     """Generate a travel itinerary based on user input"""
-    itinerary = await generate_itinerary(request)
-    return ItineraryResponse(itinerary=itinerary)
+    return await generate_itinerary(request)
