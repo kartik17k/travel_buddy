@@ -29,39 +29,39 @@ async def generate_json_itinerary(request: ItineraryRequest) -> ItineraryRespons
     
     try:
         if request.model == "openai":
-            print(f"🤖 Calling OpenAI API for {request.to_location} itinerary...")
+            print(f"Calling OpenAI API for {request.to_location} itinerary...")
             json_text = await generate_with_openai(prompt)
         elif request.model == "groq":
-            print(f"⚡ Calling Groq API for {request.to_location} itinerary...")
+            print(f"Calling Groq API for {request.to_location} itinerary...")
             json_text = await generate_with_groq(prompt)
-            print(f"✅ Groq API response received: {len(json_text)} characters")
+            print(f"Groq API response received: {len(json_text)} characters")
         else:
-            print(f"📝 Using static response for {request.to_location} itinerary...")
+            print(f"Using static response for {request.to_location} itinerary...")
             return generate_static_json_response(request)
         
         # Parse the JSON response
-        print(f"🔄 Parsing JSON response...")
-        
+        print(f"Parsing JSON response...")
+
         # Clean the response - sometimes AI models add extra text
         if json_text.strip().startswith("Here is"):
             # Find the first { and extract JSON from there
             json_start = json_text.find('{')
             if json_start != -1:
                 json_text = json_text[json_start:]
-                print(f"🧹 Cleaned response, extracted JSON from position {json_start}")
-        
+                print(f"Cleaned response, extracted JSON from position {json_start}")
+
         json_data = json.loads(json_text)
         return ItineraryResponse(**json_data)
         
     except json.JSONDecodeError as e:
         # Fallback to static response if JSON parsing fails
-        print(f"❌ JSON parsing failed: {str(e)}")
-        print(f"📄 Raw response that failed to parse: {json_text[:500]}...")
+        print(f"JSON parsing failed: {str(e)}")
+        print(f"Raw response that failed to parse: {json_text[:500]}...")
         return generate_static_json_response(request)
     except Exception as e:
         # Log the error and fallback to static response
-        print(f"❌ Error generating itinerary: {str(e)}")
-        print(f"🔧 Exception type: {type(e).__name__}")
+        print(f"Error generating itinerary: {str(e)}")
+        print(f"Exception type: {type(e).__name__}")
         return generate_static_json_response(request)
 
 
