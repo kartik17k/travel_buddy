@@ -1,108 +1,208 @@
-"""Main itinerary generation service."""
+"""Itinerary service for MongoDB operations."""
 
-import json
-from fastapi import HTTPException
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from bson import ObjectId
 
-from app.models import ItineraryRequest, ItineraryResponse
-from .openai_service import generate_with_openai
-from .groq_service import generate_with_groq
-from .static_service import generate_static_json_response
+from app.models.database import Itinerary, User, ItineraryDay, ItinerarySummary, TravelItineraryInfo
+from app.models.request import ItineraryRequest
+from app.models.response import ItineraryResponse
 
 
-async def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
-    """
-    Generate a travel itinerary using OpenAI, Groq, or static response.
+class ItineraryService:
+    """Service for itinerary-related database operations."""
     
-    Args:
-        request: The itinerary request containing destination, budget, dates, etc.
+    @staticmethod
+    async def save_itinerary(
+        itinerary_request: ItineraryRequest,
+        itinerary_response: ItineraryResponse,
+        user_id: Optional[str] = None,
+        generation_time_ms: Optional[float] = None
+    ) -> Itinerary:
+        """Save an itinerary to MongoDB."""
         
-    Returns:
-        ItineraryResponse: A structured itinerary with days, activities, and tips.
-    """
-    return await generate_json_itinerary(request)
-
-
-async def generate_json_itinerary(request: ItineraryRequest) -> ItineraryResponse:
-    """Generate structured JSON itinerary based on the selected model."""
+        # Convert response to MongoDB document format
+        travel_itinerary = TravelItineraryInfo(
+            from_location=itinerary_response.travel_itinerary["from_location"],
+            to_location=itinerary_response.travel_itinerary["to_location"],
+            dates=itinerary_response.travel_itinerary["dates"],
+            budget=itinerary_response.travel_itinerary["budget"]
+        )
+        
+        days = [
+            ItineraryDay(
+                theme=day["theme"],
+                morning=day["morning"],
+                afternoon=day["afternoon"],
+                evening=day["evening"],
+                budget=day["budget"]
+            )
+            for day in itinerary_response.days
+        ]
+        
+        summary = ItinerarySummary(
+            total_estimated_cost=itinerary_response.summary["total_estimated_cost"],
+            remaining_budget=itinerary_response.summary["remaining_budget"]
+        )
+        
+        # Create itinerary document
+        itinerary = Itinerary(
+            user_id=user_id,
+            from_location=itinerary_request.from_location,
+            to_location=itinerary_request.to_location,
+            dates=itinerary_request.dates,
+            budget=itinerary_request.budget,
+            model_used=itinerary_request.model,
+            travel_itinerary=travel_itinerary,
+            days=days,
+            summary=summary,
+            tips=itinerary_response.tips,
+            generation_time_ms=generation_time_ms,
+            created_at=datetime.utcnow()
+        )
+        
+        await itinerary.create()
+        return itinerary
     
-    prompt = _build_prompt(request)
+    @staticmethod
+    async def get_user_itineraries(user_id: str, limit: int = 10) -> List[Itinerary]:
+        """Get itineraries for a specific user."""
+        return await Itinerary.find(
+            Itinerary.user_id == user_id
+        ).sort(-Itinerary.created_at).limit(limit).to_list()
     
-    try:
-        if request.model == "openai":
-            print(f"Calling OpenAI API for {request.to_location} itinerary...")
-            json_text = await generate_with_openai(prompt)
-        elif request.model == "groq":
-            print(f"Calling Groq API for {request.to_location} itinerary...")
-            json_text = await generate_with_groq(prompt)
-            print(f"Groq API response received: {len(json_text)} characters")
-        else:
-            print(f"Using static response for {request.to_location} itinerary...")
-            return generate_static_json_response(request)
+    @staticmethod
+    async def get_itinerary_by_id(itinerary_id: str) -> Optional[Itinerary]:
+        """Get itinerary by ID."""
+        try:
+            return await Itinerary.get(itinerary_id)
+        except Exception:
+            return None
+    
+    @staticmethod
+    async def get_all_itineraries(limit: int = 100) -> List[Itinerary]:
+        """Get all itineraries."""
+        return await Itinerary.find_all().sort(-Itinerary.created_at).limit(limit).to_list()
+    
+    @staticmethod
+    async def get_itinerary_count() -> int:
+        """Get total number of itineraries."""
+        return await Itinerary.count()
+    
+    @staticmethod
+    async def get_popular_destinations(limit: int = 10) -> List[Dict[str, Any]]:
+        """Get popular destinations with counts."""
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$to_location",
+                    "count": {"$sum": 1}
+                }
+            },
+            {
+                "$sort": {"count": -1}
+            },
+            {
+                "$limit": limit
+            },
+            {
+                "$project": {
+                    "destination": "$_id",
+                    "count": 1,
+                    "_id": 0
+                }
+            }
+        ]
         
-        # Parse the JSON response
-        print(f"Parsing JSON response...")
-
-        # Clean the response - sometimes AI models add extra text
-        if json_text.strip().startswith("Here is"):
-            # Find the first { and extract JSON from there
-            json_start = json_text.find('{')
-            if json_start != -1:
-                json_text = json_text[json_start:]
-                print(f"Cleaned response, extracted JSON from position {json_start}")
-
-        json_data = json.loads(json_text)
-        return ItineraryResponse(**json_data)
+        results = await Itinerary.aggregate(pipeline).to_list(length=limit)
+        return results
+    
+    @staticmethod
+    async def get_model_usage_stats() -> List[Dict[str, Any]]:
+        """Get AI model usage statistics."""
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$model_used",
+                    "count": {"$sum": 1}
+                }
+            },
+            {
+                "$sort": {"count": -1}
+            },
+            {
+                "$project": {
+                    "model": "$_id",
+                    "count": 1,
+                    "_id": 0
+                }
+            }
+        ]
         
-    except json.JSONDecodeError as e:
-        # Fallback to static response if JSON parsing fails
-        print(f"JSON parsing failed: {str(e)}")
-        print(f"Raw response that failed to parse: {json_text[:500]}...")
-        return generate_static_json_response(request)
-    except Exception as e:
-        # Log the error and fallback to static response
-        print(f"Error generating itinerary: {str(e)}")
-        print(f"Exception type: {type(e).__name__}")
-        return generate_static_json_response(request)
+        results = await Itinerary.aggregate(pipeline).to_list()
+        return results
+    
+    @staticmethod
+    async def get_average_budget() -> Optional[float]:
+        """Get average budget across all itineraries."""
+        pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "avg_budget": {"$avg": "$budget"}
+                }
+            }
+        ]
+        
+        result = await Itinerary.aggregate(pipeline).to_list(length=1)
+        return result[0]["avg_budget"] if result else 0.0
+    
+    @staticmethod
+    async def search_itineraries(
+        destination: Optional[str] = None,
+        origin: Optional[str] = None,
+        min_budget: Optional[float] = None,
+        max_budget: Optional[float] = None,
+        model: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Itinerary]:
+        """Search itineraries with filters."""
+        query = {}
+        
+        if destination:
+            query["to_location"] = {"$regex": destination, "$options": "i"}
+        
+        if origin:
+            query["from_location"] = {"$regex": origin, "$options": "i"}
+        
+        if min_budget is not None or max_budget is not None:
+            budget_query = {}
+            if min_budget is not None:
+                budget_query["$gte"] = min_budget
+            if max_budget is not None:
+                budget_query["$lte"] = max_budget
+            query["budget"] = budget_query
+        
+        if model:
+            query["model_used"] = model
+        
+        return await Itinerary.find(query).sort(-Itinerary.created_at).limit(limit).to_list()
+    
+    @staticmethod
+    async def delete_itinerary(itinerary_id: str, user_id: Optional[str] = None) -> bool:
+        """Delete an itinerary."""
+        try:
+            query = {"_id": ObjectId(itinerary_id)}
+            if user_id:
+                query["user_id"] = user_id
+            
+            itinerary = await Itinerary.find_one(query)
+            if itinerary:
+                await itinerary.delete()
+                return True
+            return False
+        except Exception:
+            return False
 
 
-def _build_prompt(request: ItineraryRequest) -> str:
-    """Build the prompt for AI models."""
-    return (
-        f"You are a travel planning assistant. Create a detailed travel itinerary for a trip from {request.from_location} to {request.to_location} "
-        f"for the dates {request.dates} with a total budget of ${request.budget} USD.\n\n"
-        f"IMPORTANT: Return ONLY a valid JSON object with no additional text, explanations, or formatting. Start directly with {{ and end with }}.\n\n"
-        f"JSON Structure:\n"
-        f"""{{
-            "travel_itinerary": {{
-                "from_location": "{request.from_location}",
-                "to_location": "{request.to_location}",
-                "dates": "{request.dates}",
-                "budget": {request.budget}
-            }},
-            "days": [
-                {{
-                    "theme": "Day theme like Travel, Adventure, Culture, etc.",
-                    "morning": "Include a specific named place to visit, with detailed activity (e.g., 'Visit Raja's Seat viewpoint for sunrise 🌄 and have coffee at Beans N Brews Cafe')",
-                    "afternoon": "Specific activity with place (e.g., 'Explore Madikeri Fort 🏰 and have lunch at Raintree Restaurant')",
-                    "evening": "Include named café, show, local market, or walk (e.g., 'Enjoy a traditional Kodava dinner at Coorg Cuisine 🍛 and shop at Kushalnagar market 🛍️')",
-                    "budget": float
-                }}
-            ],
-            "summary": {{
-                "total_estimated_cost": float,
-                "remaining_budget": float
-            }},
-            "tips": [
-                "Include 3-5 specific and practical travel tips for visiting {request.to_location}"
-            ],
-            "raw_text": null
-        }}"""
-        f"\n\nConstraints:\n"
-        f"- DO NOT EXCEED the given budget of ${request.budget} USD.\n"
-        f"- Calculate reasonable travel time and cost from {request.from_location} to {request.to_location}.\n"
-        f"- Use real locations, restaurants, cafes, tourist spots, or cultural landmarks in and around {request.to_location}.\n"
-        f"- Use emojis to make the experience lively.\n"
-        f"- Include at least one adventure activity if available (like rafting, trekking, etc.)\n"
-        f"- Avoid generic placeholders like 'main museums' or 'hotel check-in' — be specific.\n"
-        f"- Return ONLY the JSON object. No explanation, introduction, or extra text before or after the JSON."
-    )
+itinerary_service = ItineraryService()

@@ -23,5 +23,19 @@ class Settings:
     APP_NAME: str = os.getenv("APP_NAME", "Travel Buddy API")
     VERSION: str = os.getenv("VERSION", "1.0.0")
     DESCRIPTION: str = os.getenv("DESCRIPTION", "Generate personalized travel itineraries using AI")
+    
+    # Authentication Configuration
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-super-secret-key-change-this-in-production-make-it-very-long-and-random")
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    
+    # MongoDB Configuration
+    MONGODB_URL: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+    DATABASE_NAME: str = os.getenv("DATABASE_NAME", "travel_buddy")
+    
+    # Development Settings
+    DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
 settings = Settings()

@@ -9,69 +9,71 @@ from app.models import (
 )
 
 
-def generate_static_json_response(request: ItineraryRequest) -> ItineraryResponse:
-    """Generate structured JSON response using static template."""
-    return ItineraryResponse(
-        travel_itinerary=TravelItinerary(
-            from_location=request.from_location,
-            to_location=request.to_location,
-            dates=request.dates,
-            budget=request.budget
-        ),
-        days=[
-            DayActivity(
-                theme="Travel Day & Arrival",
-                morning=f"Departure from {request.from_location}",
-                afternoon=f"Journey to {request.to_location} and hotel check-in",
-                evening="Welcome dinner and local area exploration",
-                budget=150
+class StaticService:
+    """Service for generating static/fallback itineraries."""
+    
+    def generate_itinerary(self, request: ItineraryRequest) -> ItineraryResponse:
+        """Generate structured JSON response using static template."""
+        return ItineraryResponse(
+            travel_itinerary=TravelItinerary(
+                from_location=request.from_location,
+                to_location=request.to_location,
+                dates=request.dates,
+                budget=request.budget
             ),
-            DayActivity(
-                theme="Cultural Immersion",
-                morning=f"Visit main museums and galleries in {request.to_location}",
-                afternoon="Historical landmarks tour",
-                evening="Local cultural show or performance",
-                budget=120
+            days=[
+                DayActivity(
+                    theme="Travel Day & Arrival",
+                    morning=f"Departure from {request.from_location}",
+                    afternoon=f"Journey to {request.to_location} and hotel check-in",
+                    evening="Welcome dinner and local area exploration",
+                    budget=150
+                ),
+                DayActivity(
+                    theme="Cultural Immersion",
+                    morning=f"Visit main museums and galleries in {request.to_location}",
+                    afternoon="Historical landmarks tour",
+                    evening="Local cultural show or performance",
+                    budget=120
+                ),
+                DayActivity(
+                    theme="Local Cuisine & Shopping",
+                    morning="Food market tour and cooking class",
+                    afternoon="Shopping at local markets",
+                    evening="Fine dining experience",
+                    budget=180
+                ),
+                DayActivity(
+                    theme="Adventure & Nature",
+                    morning=f"Outdoor activities or nature excursion near {request.to_location}",
+                    afternoon="Continue outdoor activities",
+                    evening="Relaxation and local nightlife",
+                    budget=200
+                ),
+                DayActivity(
+                    theme="Departure",
+                    morning="Last-minute shopping or sightseeing",
+                    afternoon=f"Return journey to {request.from_location}",
+                    evening="Departure",
+                    budget=80
+                )
+            ],
+            summary=TravelSummary(
+                total_estimated_cost=730,
+                remaining_budget=request.budget - 730
             ),
-            DayActivity(
-                theme="Local Cuisine & Shopping",
-                morning="Food market tour and cooking class",
-                afternoon="Shopping at local markets",
-                evening="Fine dining experience",
-                budget=180
-            ),
-            DayActivity(
-                theme="Adventure & Nature",
-                morning=f"Outdoor activities or nature excursion near {request.to_location}",
-                afternoon="Continue outdoor activities",
-                evening="Relaxation and local nightlife",
-                budget=200
-            ),
-            DayActivity(
-                theme="Departure",
-                morning="Last-minute shopping or sightseeing",
-                afternoon=f"Return journey to {request.from_location}",
-                evening="Departure",
-                budget=80
-            )
-        ],
-        summary=TravelSummary(
-            total_estimated_cost=730,
-            remaining_budget=request.budget - 730
-        ),
-        tips=[
-            f"Book accommodations in {request.to_location} in advance",
-            "Try local transportation for authentic experience",
-            "Always have emergency contacts handy",
-            f"Learn basic phrases in the local language of {request.to_location}",
-            "Keep digital and physical copies of important documents"
-        ]
-    )
-
-
-def generate_static_text_response(request: ItineraryRequest) -> str:
-    """Generate itinerary using static template (text format)."""
-    return f"""🌍 Travel Itinerary: {request.from_location} → {request.to_location}
+            tips=[
+                f"Book accommodations in {request.to_location} in advance",
+                "Try local transportation for authentic experience",
+                "Always have emergency contacts handy",
+                f"Learn basic phrases in the local language of {request.to_location}",
+                "Keep digital and physical copies of important documents"
+            ]
+        )
+    
+    def generate_static_text_response(self, request: ItineraryRequest) -> str:
+        """Generate itinerary using static template (text format)."""
+        return f"""🌍 Travel Itinerary: {request.from_location} → {request.to_location}
 📅 Dates: {request.dates}
 💰 Budget: ${request.budget} USD
 
@@ -108,3 +110,7 @@ Remaining Budget: ${request.budget - 730}
 
 💡 Tips: Book accommodations in {request.to_location} in advance, try local transportation, and always have emergency contacts handy!
 """
+
+
+# Create service instance
+static_service = StaticService()

@@ -1,10 +1,13 @@
 # Travel Buddy API 🌍
 
-A professional FastAPI application that generates personalized travel itineraries using AI models (OpenAI, Groq) or static templates. Built with clean architecture principles and comprehensive testing.
+A professional FastAPI application that generates personalized travel itineraries using AI models (OpenAI, Groq) or static templates. Built with MongoDB for flexible data storage and modern architecture.
 
 ## ✨ Features
 
 - **Multiple AI Models**: Support for OpenAI GPT, Groq, and local static responses
+- **User Authentication**: Secure registration, login, and JWT-based authentication
+- **MongoDB Database**: NoSQL database for flexible data storage and fast queries
+- **Itinerary Storage**: Save and retrieve travel plans for authenticated users
 - **Structured Responses**: JSON-formatted itineraries with detailed day-by-day plans
 - **Flexible Input**: Accepts origin, destination, budget, dates, and model preferences
 - **Robust Error Handling**: Graceful fallbacks when AI services are unavailable
@@ -17,16 +20,16 @@ A professional FastAPI application that generates personalized travel itinerarie
 ```
 travel_buddy/
 ├── app/                          # Main application package
-│   ├── api/routes/              # API endpoints (health, itinerary)
-│   ├── core/                    # Configuration and settings
-│   ├── models/                  # Request/response schemas
-│   └── services/                # Business logic (OpenAI, Groq, static)
+│   ├── api/routes/              # API endpoints (health, itinerary, auth)
+│   ├── core/                    # Configuration and MongoDB connection
+│   ├── models/                  # Request/response schemas & MongoDB models
+│   └── services/                # Business logic (AI services, user/itinerary services)
 ├── tests/                       # Comprehensive test suite
 ├── main.py                      # FastAPI application entry point
+├── init_db.py                   # Database setup script
+├── docker-compose.yml           # MongoDB Docker setup
 └── requirements.txt             # Dependencies
 ```
-
-For detailed structure documentation, see [STRUCTURE.md](STRUCTURE.md).
 
 ## 🚀 Quick Start
 
@@ -50,18 +53,43 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configuration
+### 2. Setup MongoDB
 
+**Option A: Using Docker (Recommended)**
 ```bash
-# Copy environment template
-cp .env.example .env
+# Start MongoDB
+docker-compose up -d
 
-# Edit .env file with your API keys (optional)
-# OPENAI_API_KEY=your_openai_api_key_here
-# GROQ_API_KEY=your_groq_api_key_here
+# MongoDB will be available at: mongodb://localhost:27017
 ```
 
-### 3. Run the Application
+**Option B: Local MongoDB Installation**
+```bash
+# Download and install MongoDB from: https://www.mongodb.com/try/download/community
+# Start MongoDB service
+mongod
+
+# MongoDB will be available at: mongodb://localhost:27017
+```
+
+### 3. Configuration
+
+```bash
+# Edit .env file with your settings
+# MONGODB_URL=mongodb://localhost:27017
+# DATABASE_NAME=travel_buddy
+# OPENAI_API_KEY=your_openai_api_key_here (optional)
+# GROQ_API_KEY=your_groq_api_key_here (optional)
+```
+
+### 4. Initialize Database
+
+```bash
+# Initialize MongoDB collections and indexes
+python init_db.py
+```
+
+### 5. Run the Application
 
 ```bash
 # Start the server
@@ -76,15 +104,45 @@ The API will be available at:
 - **Interactive Docs**: http://localhost:8000/docs
 - **Alternative Docs**: http://localhost:8000/redoc
 
+### 6. MongoDB Management
+
+Use **MongoDB Compass** to view and manage your database:
+- Download: https://www.mongodb.com/products/compass
+- Connect to: `mongodb://localhost:27017`
+- Database: `travel_buddy`
+- Collections: `users`, `itineraries`
+
 ## 📡 API Usage
+
+### Authentication
+
+```bash
+# Register a new user
+curl -X POST "http://localhost:8000/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "secure_password123",
+    "full_name": "John Doe"
+  }'
+
+# Login to get access token
+curl -X POST "http://localhost:8000/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "secure_password123"
+  }'
+```
 
 ### Health Check
 ```bash
 curl http://localhost:8000/health
 ```
 
-### Generate Itinerary
+### Generate Itinerary (Optional Authentication)
 ```bash
+# Without authentication (not saved)
 curl -X POST "http://localhost:8000/generate_itinerary" \
   -H "Content-Type: application/json" \
   -d '{
@@ -94,6 +152,24 @@ curl -X POST "http://localhost:8000/generate_itinerary" \
     "dates": "2025-08-15 to 2025-08-20",
     "model": "local"
   }'
+
+# With authentication (saved to user account)
+curl -X POST "http://localhost:8000/generate_itinerary" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "from_location": "Mumbai",
+    "to_location": "Paris", 
+    "budget": 2000,
+    "dates": "2025-08-15 to 2025-08-20",
+    "model": "groq"
+  }'
+```
+
+### View Saved Itineraries
+```bash
+curl -X GET "http://localhost:8000/my-itineraries" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ### Request Parameters
@@ -131,6 +207,36 @@ curl -X POST "http://localhost:8000/generate_itinerary" \
   ]
 }
 ```
+
+## 🛠️ Admin Tools
+
+### User Management CLI
+```bash
+# List all users
+python manage_users.py list
+
+# Create a new user interactively
+python manage_users.py create
+```
+
+### Database Management
+```bash
+# Initialize database tables
+python init_db.py
+```
+
+## 🔐 Authentication
+
+The API includes a complete authentication system with:
+
+- **User Registration & Login**: Secure account creation and authentication
+- **JWT Tokens**: Stateless, secure token-based authentication
+- **Password Security**: Bcrypt hashing with salt
+- **Optional Authentication**: Generate itineraries with or without login
+- **Itinerary Storage**: Save travel plans to user accounts
+- **Admin Tools**: CLI user management utilities
+
+For detailed authentication documentation, see [AUTH_GUIDE.md](AUTH_GUIDE.md).
 
 ## 🧪 Testing
 

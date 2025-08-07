@@ -1,5 +1,5 @@
 """Business logic services for Travel Buddy API."""
 
-from .itinerary_service import generate_itinerary
+from .itinerary_service import itinerary_service
 
-__all__ = ["generate_itinerary"]
+__all__ = ["itinerary_service"]

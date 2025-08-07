@@ -7,11 +7,25 @@ from .response import (
     TravelItinerary,
     ItineraryResponse
 )
+from .auth import (
+    UserCreate,
+    UserUpdate,
+    User,
+    Token,
+    TokenData,
+    LoginRequest
+)
 
 __all__ = [
     "ItineraryRequest",
     "DayActivity", 
     "TravelSummary",
     "TravelItinerary",
-    "ItineraryResponse"
+    "ItineraryResponse",
+    "UserCreate",
+    "UserUpdate", 
+    "User",
+    "Token",
+    "TokenData",
+    "LoginRequest"
 ]

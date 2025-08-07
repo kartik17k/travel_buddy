@@ -3,6 +3,15 @@ uvicorn[standard]
 openai
 pydantic
 python-dotenv
+groq
+
+# Authentication and Database - MongoDB Only
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+motor
+pymongo
+beanie
 
 # Development and Testing
 pytest
