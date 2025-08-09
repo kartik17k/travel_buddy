@@ -38,11 +38,3 @@ env/
 # OS
 .DS_Store
 Thumbs.db
-
-setup.py
-STRUCTURE.md
-test_mongo_connection.py
-add_user.py
-AUTH_GUIDE.md
-MONGODB_TROUBLESHOOTING.md
-test_atlas_specific.py

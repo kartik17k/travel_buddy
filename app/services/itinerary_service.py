@@ -1,10 +1,9 @@
 """Itinerary service for MongoDB operations."""
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from bson import ObjectId
+from typing import List, Optional
 
-from app.models.database import Itinerary, User, ItineraryDay, ItinerarySummary, TravelItineraryInfo
+from app.models.database import Itinerary, ItineraryDay, ItinerarySummary, TravelItineraryInfo
 from app.models.request import ItineraryRequest
 from app.models.response import ItineraryResponse
 
@@ -23,26 +22,26 @@ class ItineraryService:
         
         # Convert response to MongoDB document format
         travel_itinerary = TravelItineraryInfo(
-            from_location=itinerary_response.travel_itinerary["from_location"],
-            to_location=itinerary_response.travel_itinerary["to_location"],
-            dates=itinerary_response.travel_itinerary["dates"],
-            budget=itinerary_response.travel_itinerary["budget"]
+            from_location=itinerary_response.travel_itinerary.from_location,
+            to_location=itinerary_response.travel_itinerary.to_location,
+            dates=itinerary_response.travel_itinerary.dates,
+            budget=itinerary_response.travel_itinerary.budget
         )
         
         days = [
             ItineraryDay(
-                theme=day["theme"],
-                morning=day["morning"],
-                afternoon=day["afternoon"],
-                evening=day["evening"],
-                budget=day["budget"]
+                theme=day.theme,
+                morning=day.morning,
+                afternoon=day.afternoon,
+                evening=day.evening,
+                budget=day.budget
             )
             for day in itinerary_response.days
         ]
         
         summary = ItinerarySummary(
-            total_estimated_cost=itinerary_response.summary["total_estimated_cost"],
-            remaining_budget=itinerary_response.summary["remaining_budget"]
+            total_estimated_cost=itinerary_response.summary.total_estimated_cost,
+            remaining_budget=itinerary_response.summary.remaining_budget
         )
         
         # Create itinerary document
@@ -80,128 +79,36 @@ class ItineraryService:
             return None
     
     @staticmethod
-    async def get_all_itineraries(limit: int = 100) -> List[Itinerary]:
-        """Get all itineraries."""
-        return await Itinerary.find_all().sort(-Itinerary.created_at).limit(limit).to_list()
-    
-    @staticmethod
-    async def get_itinerary_count() -> int:
-        """Get total number of itineraries."""
-        return await Itinerary.count()
-    
-    @staticmethod
-    async def get_popular_destinations(limit: int = 10) -> List[Dict[str, Any]]:
-        """Get popular destinations with counts."""
-        pipeline = [
-            {
-                "$group": {
-                    "_id": "$to_location",
-                    "count": {"$sum": 1}
-                }
-            },
-            {
-                "$sort": {"count": -1}
-            },
-            {
-                "$limit": limit
-            },
-            {
-                "$project": {
-                    "destination": "$_id",
-                    "count": 1,
-                    "_id": 0
-                }
-            }
-        ]
-        
-        results = await Itinerary.aggregate(pipeline).to_list(length=limit)
-        return results
-    
-    @staticmethod
-    async def get_model_usage_stats() -> List[Dict[str, Any]]:
-        """Get AI model usage statistics."""
-        pipeline = [
-            {
-                "$group": {
-                    "_id": "$model_used",
-                    "count": {"$sum": 1}
-                }
-            },
-            {
-                "$sort": {"count": -1}
-            },
-            {
-                "$project": {
-                    "model": "$_id",
-                    "count": 1,
-                    "_id": 0
-                }
-            }
-        ]
-        
-        results = await Itinerary.aggregate(pipeline).to_list()
-        return results
-    
-    @staticmethod
-    async def get_average_budget() -> Optional[float]:
-        """Get average budget across all itineraries."""
-        pipeline = [
-            {
-                "$group": {
-                    "_id": None,
-                    "avg_budget": {"$avg": "$budget"}
-                }
-            }
-        ]
-        
-        result = await Itinerary.aggregate(pipeline).to_list(length=1)
-        return result[0]["avg_budget"] if result else 0.0
-    
-    @staticmethod
-    async def search_itineraries(
-        destination: Optional[str] = None,
-        origin: Optional[str] = None,
-        min_budget: Optional[float] = None,
-        max_budget: Optional[float] = None,
-        model: Optional[str] = None,
-        limit: int = 50
-    ) -> List[Itinerary]:
-        """Search itineraries with filters."""
-        query = {}
-        
-        if destination:
-            query["to_location"] = {"$regex": destination, "$options": "i"}
-        
-        if origin:
-            query["from_location"] = {"$regex": origin, "$options": "i"}
-        
-        if min_budget is not None or max_budget is not None:
-            budget_query = {}
-            if min_budget is not None:
-                budget_query["$gte"] = min_budget
-            if max_budget is not None:
-                budget_query["$lte"] = max_budget
-            query["budget"] = budget_query
-        
-        if model:
-            query["model_used"] = model
-        
-        return await Itinerary.find(query).sort(-Itinerary.created_at).limit(limit).to_list()
+    async def get_cached_itinerary(from_location: str, to_location: str) -> Optional[Itinerary]:
+        """Get an existing itinerary for the same route (for caching)."""
+        return await Itinerary.find(
+            Itinerary.from_location == from_location,
+            Itinerary.to_location == to_location
+        ).first_or_none()
     
     @staticmethod
     async def delete_itinerary(itinerary_id: str, user_id: Optional[str] = None) -> bool:
         """Delete an itinerary."""
         try:
-            query = {"_id": ObjectId(itinerary_id)}
-            if user_id:
-                query["user_id"] = user_id
+            # Get the itinerary by ID
+            itinerary = await Itinerary.get(itinerary_id)
             
-            itinerary = await Itinerary.find_one(query)
-            if itinerary:
-                await itinerary.delete()
-                return True
-            return False
-        except Exception:
+            if not itinerary:
+                return False
+            
+            # Access control: users can delete their own itineraries OR anonymous itineraries
+            if user_id and itinerary.user_id and itinerary.user_id != user_id:
+                return False  # Different user's itinerary - access denied
+            
+            # Delete the itinerary
+            await itinerary.delete()
+            return True
+            
+        except Exception as e:
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error deleting itinerary {itinerary_id}: {e}")
             return False
 
 

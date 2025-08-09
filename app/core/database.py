@@ -47,12 +47,12 @@ async def connect_to_mongo():
         )
         
         db.connected = True
-        logger.info(f"✅ Connected to MongoDB Atlas: {settings.DATABASE_NAME}")
+        logger.info(f"Connected to MongoDB Atlas: {settings.DATABASE_NAME}")
         
     except Exception as e:
-        logger.warning(f"⚠️  Could not connect to MongoDB Atlas: {e}")
-        logger.warning("📝 API will start but MongoDB features will be disabled")
-        logger.warning("🔧 To fix this:")
+        logger.warning(f"Could not connect to MongoDB Atlas: {e}")
+        logger.warning("API will start but MongoDB features will be disabled")
+        logger.warning("To fix this:")
         logger.warning("   1. Replace <db_password> with your actual password in .env")
         logger.warning("   2. Whitelist your IP in MongoDB Atlas Network Access")
         logger.warning("   3. Ensure your MongoDB Atlas cluster is running")

@@ -79,6 +79,28 @@ async def logout_user():
     return {"message": "Successfully logged out. Please delete the token on client side."}
 
 
+@router.get("/users", response_model=list[UserResponse])
+async def get_all_users(_: None = Depends(require_mongodb)):
+    """Get all users (public endpoint)."""
+    try:
+        users = await user_service.get_all_users()
+        return [
+            UserResponse(
+                id=str(user.id),
+                email=user.email,
+                full_name=user.full_name,
+                is_active=user.is_active,
+                created_at=user.created_at
+            )
+            for user in users
+        ]
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve users"
+        )
+
+
 @router.get("/verify-token")
 async def verify_user_token(current_user: User = Depends(get_current_active_user)):
     """Verify if the current token is valid."""

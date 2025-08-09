@@ -1,5 +1,6 @@
 """MongoDB dependencies for FastAPI routes."""
 
+from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -10,6 +11,33 @@ from app.services.user_service import user_service
 from app.models.database import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
+
+
+async def get_current_user_optional(token: str = Depends(oauth2_scheme_optional)) -> Optional[User]:
+    """Get current user from JWT token, return None if not authenticated."""
+    if not token:
+        return None
+        
+    if not is_mongodb_connected():
+        return None
+    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+    except JWTError:
+        return None
+    
+    try:
+        user = await user_service.get_user_by_email(email)
+        if user and user.is_active:
+            return user
+    except Exception:
+        return None
+    
+    return None
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:

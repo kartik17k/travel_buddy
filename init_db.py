@@ -38,7 +38,7 @@ async def init_database():
         
         # Test the connection
         await db.command("ping")
-        logger.info("✅ Database connection successful!")
+        logger.info("Database connection successful!")
         
         # Display collection info
         collections = await db.list_collection_names()
@@ -65,7 +65,7 @@ async def test_connection():
         
         # Test connection
         await db.command("ping")
-        logger.info("✅ Database connection test successful!")
+        logger.info("Database connection test successful!")
         
         # Display server info
         server_info = await db.command("serverStatus")
@@ -76,7 +76,7 @@ async def test_connection():
         return True
         
     except Exception as e:
-        logger.error(f"❌ Database connection test failed: {e}")
+        logger.error(f"Database connection test failed: {e}")
         return False
 
 

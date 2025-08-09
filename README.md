@@ -4,10 +4,12 @@ A professional FastAPI application that generates personalized travel itinerarie
 
 ## ✨ Features
 
+- **Smart Caching System**: Reuses existing itineraries for same routes with updated dates/budget
 - **Multiple AI Models**: Support for OpenAI GPT, Groq, and local static responses
 - **User Authentication**: Secure registration, login, and JWT-based authentication
-- **MongoDB Database**: NoSQL database for flexible data storage and fast queries
-- **Itinerary Storage**: Save and retrieve travel plans for authenticated users
+- **MongoDB Database**: NoSQL database with Beanie ODM for flexible data storage
+- **Itinerary Management**: Save, retrieve, and delete travel plans for authenticated users
+- **Optional Authentication**: Generate itineraries with or without login (smart storage)
 - **Structured Responses**: JSON-formatted itineraries with detailed day-by-day plans
 - **Flexible Input**: Accepts origin, destination, budget, dates, and model preferences
 - **Robust Error Handling**: Graceful fallbacks when AI services are unavailable
@@ -20,14 +22,22 @@ A professional FastAPI application that generates personalized travel itinerarie
 ```
 travel_buddy/
 ├── app/                          # Main application package
-│   ├── api/routes/              # API endpoints (health, itinerary, auth)
+│   ├── api/
+│   │   ├── routes/              # API endpoints
+│   │   │   ├── auth.py         # Authentication endpoints
+│   │   │   ├── health.py       # Health check endpoint
+│   │   │   ├── itinerary.py    # Itinerary generation & management
+│   │   │   └── admin.py        # Admin utilities
+│   │   └── dependencies.py     # Authentication dependencies
 │   ├── core/                    # Configuration and MongoDB connection
 │   ├── models/                  # Request/response schemas & MongoDB models
 │   └── services/                # Business logic (AI services, user/itinerary services)
 ├── tests/                       # Comprehensive test suite
 ├── main.py                      # FastAPI application entry point
 ├── init_db.py                   # Database setup script
-├── docker-compose.yml           # MongoDB Docker setup
+├── add_user.py                  # User management CLI utility
+├── AUTH_GUIDE.md               # Authentication documentation
+├── STRUCTURE.md                # Detailed project structure
 └── requirements.txt             # Dependencies
 ```
 
@@ -55,7 +65,15 @@ pip install -r requirements.txt
 
 ### 2. Setup MongoDB
 
-**Option A: Using Docker (Recommended)**
+**Option A: MongoDB Atlas (Recommended for Production)**
+```bash
+# Create a free MongoDB Atlas account at: https://www.mongodb.com/atlas
+# Create a cluster and get your connection string
+# Update .env file with your Atlas connection string:
+# MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/travel_buddy?retryWrites=true&w=majority
+```
+
+**Option B: Using Docker (Local Development)**
 ```bash
 # Start MongoDB
 docker-compose up -d
@@ -63,7 +81,7 @@ docker-compose up -d
 # MongoDB will be available at: mongodb://localhost:27017
 ```
 
-**Option B: Local MongoDB Installation**
+**Option C: Local MongoDB Installation**
 ```bash
 # Download and install MongoDB from: https://www.mongodb.com/try/download/community
 # Start MongoDB service
@@ -76,10 +94,23 @@ mongod
 
 ```bash
 # Edit .env file with your settings
+# For MongoDB Atlas (recommended):
+# MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/travel_buddy?retryWrites=true&w=majority
+
+# For local MongoDB:
 # MONGODB_URL=mongodb://localhost:27017
+
+# Database name:
 # DATABASE_NAME=travel_buddy
-# OPENAI_API_KEY=your_openai_api_key_here (optional)
-# GROQ_API_KEY=your_groq_api_key_here (optional)
+
+# AI API keys (optional):
+# OPENAI_API_KEY=your_openai_api_key_here
+# GROQ_API_KEY=your_groq_api_key_here
+
+# JWT settings:
+# SECRET_KEY=your-secret-key-here
+# ALGORITHM=HS256
+# ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 ### 4. Initialize Database
@@ -172,6 +203,18 @@ curl -X GET "http://localhost:8000/my-itineraries" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+### Get Specific Itinerary
+```bash
+curl -X GET "http://localhost:8000/itinerary/ITINERARY_ID" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Delete Itinerary
+```bash
+curl -X DELETE "http://localhost:8000/itinerary/ITINERARY_ID" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
 ### Request Parameters
 - `from_location`: Origin city (e.g., "Mumbai", "New York")
 - `to_location`: Destination city (e.g., "Paris", "Tokyo")
@@ -212,16 +255,10 @@ curl -X GET "http://localhost:8000/my-itineraries" \
 
 ### User Management CLI
 ```bash
-# List all users
-python manage_users.py list
-
 # Create a new user interactively
-python manage_users.py create
-```
+python add_user.py
 
-### Database Management
-```bash
-# Initialize database tables
+# Initialize database collections and indexes
 python init_db.py
 ```
 
@@ -229,11 +266,13 @@ python init_db.py
 
 The API includes a complete authentication system with:
 
+- **Smart Caching**: Automatically reuses existing itineraries for same routes, updating only dates and budget
 - **User Registration & Login**: Secure account creation and authentication
 - **JWT Tokens**: Stateless, secure token-based authentication
 - **Password Security**: Bcrypt hashing with salt
 - **Optional Authentication**: Generate itineraries with or without login
-- **Itinerary Storage**: Save travel plans to user accounts
+- **Itinerary Storage**: Save travel plans to user accounts automatically when authenticated
+- **Itinerary Management**: View, retrieve, and delete your saved itineraries
 - **Admin Tools**: CLI user management utilities
 
 For detailed authentication documentation, see [AUTH_GUIDE.md](AUTH_GUIDE.md).
@@ -279,9 +318,15 @@ mypy app/
 - Python 3.8+
 - FastAPI
 - Uvicorn
+- MongoDB (Atlas or local)
+- Beanie (MongoDB ODM)
+- Motor (Async MongoDB driver)
 - OpenAI SDK (optional)
+- Groq SDK (optional)
 - Pydantic
 - Python-dotenv
+- PassLib with Bcrypt
+- Python-JOSE for JWT
 
 ## 🤝 Contributing
 
