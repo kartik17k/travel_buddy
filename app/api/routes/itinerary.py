@@ -4,6 +4,8 @@ import time
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import JSONResponse
+from fastapi import status
 
 from app.models.request import ItineraryRequest
 from app.models.response import ItineraryResponse
@@ -44,11 +46,10 @@ async def generate_itinerary(
                 from_location=request.from_location,
                 to_location=request.to_location
             )
-        
+
         if cached_itinerary:
             # Step 2: Reuse existing itinerary with updated dates
             logger.info(f"Found cached itinerary (ID: {cached_itinerary.id}), reusing with new dates")
-            
             response = ItineraryResponse(
                 travel_itinerary={
                     "from_location": request.from_location,
@@ -72,10 +73,8 @@ async def generate_itinerary(
                 },
                 tips=cached_itinerary.tips
             )
-            
             generation_time = (time.time() - start_time) * 1000
             logger.info(f"Reused cached itinerary in {generation_time:.2f}ms")
-            
         else:
             # Step 3: Generate new itinerary using AI
             if request.model == "openai":
@@ -87,15 +86,12 @@ async def generate_itinerary(
             else:  # Static model
                 logger.info("Generating static itinerary (not cached)")
                 response = static_service.generate_itinerary(request)
-            
             generation_time = (time.time() - start_time) * 1000
-            
             # Step 4: ALWAYS save AI-generated itineraries (regardless of authentication)
             if request.model in ["groq", "openai"]:
                 try:
                     user_id = str(current_user.id) if current_user else None
                     logger.info(f"Saving AI-generated itinerary (user: {user_id or 'anonymous'})")
-                    
                     saved_itinerary = await itinerary_service.save_itinerary(
                         itinerary_request=request,
                         itinerary_response=response,
@@ -108,17 +104,26 @@ async def generate_itinerary(
                     # Don't fail the request if saving fails
             else:
                 logger.info("Static itinerary not saved (by design)")
-        
+
         logger.info(f"Itinerary generated successfully in {generation_time:.2f}ms")
-        return response
-        
-    except HTTPException:
-        raise
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content={
+                "status": "success",
+                "message": "Itinerary generated successfully",
+                "data": response.dict()
+            }
+        )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.error(f"Error generating itinerary: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate itinerary: {str(e)}"
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "message": f"Failed to generate itinerary: {str(e)}"
+            }
         )
 
 
@@ -133,7 +138,6 @@ async def get_my_itineraries(
             user_id=str(current_user.id),
             limit=limit
         )
-        
         # Convert MongoDB documents to response format
         response_list = []
         for itinerary in itineraries:
@@ -160,15 +164,23 @@ async def get_my_itineraries(
                 },
                 tips=itinerary.tips
             )
-            response_list.append(response)
-        
-        return response_list
-        
+            response_list.append(response.dict())
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Fetched user itineraries successfully",
+                "data": response_list
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching user itineraries: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to fetch itineraries"
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "message": "Failed to fetch itineraries"
+            }
         )
 
 
@@ -180,14 +192,23 @@ async def get_itinerary(
     """Get a specific itinerary by ID."""
     try:
         itinerary = await itinerary_service.get_itinerary_by_id(itinerary_id)
-        
         if not itinerary:
-            raise HTTPException(status_code=404, detail="Itinerary not found")
-        
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={
+                    "status": "error",
+                    "message": "Itinerary not found"
+                }
+            )
         # Check if itinerary belongs to user
         if itinerary.user_id != str(current_user.id):
-            raise HTTPException(status_code=403, detail="Access denied")
-        
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={
+                    "status": "error",
+                    "message": "Access denied"
+                }
+            )
         # Convert to response format
         response = ItineraryResponse(
             travel_itinerary={
@@ -212,16 +233,22 @@ async def get_itinerary(
             },
             tips=itinerary.tips
         )
-        
-        return response
-        
-    except HTTPException:
-        raise
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Fetched itinerary successfully",
+                "data": response.dict()
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching itinerary: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to fetch itinerary"
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "message": "Failed to fetch itinerary"
+            }
         )
 
 
@@ -236,17 +263,27 @@ async def delete_itinerary(
             itinerary_id=itinerary_id,
             user_id=str(current_user.id)
         )
-        
         if not success:
-            raise HTTPException(status_code=404, detail="Itinerary not found or access denied")
-        
-        return {"message": "Itinerary deleted successfully"}
-        
-    except HTTPException:
-        raise
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={
+                    "status": "error",
+                    "message": "Itinerary not found or access denied"
+                }
+            )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "status": "success",
+                "message": "Itinerary deleted successfully"
+            }
+        )
     except Exception as e:
         logger.error(f"Error deleting itinerary: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete itinerary"
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": "error",
+                "message": "Failed to delete itinerary"
+            }
         )

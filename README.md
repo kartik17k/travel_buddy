@@ -223,34 +223,61 @@ curl -X DELETE "http://localhost:8000/itinerary/ITINERARY_ID" \
 - `model`: AI model ("openai", "groq", or "local")
 
 ### Response Format
+
+All API responses now include a top-level status and message, and always return an explicit HTTP status code for frontend integration.
+
+#### Success Example (201 Created)
 ```json
 {
-  "travel_itinerary": {
-    "from_location": "Mumbai",
-    "to_location": "Paris",
-    "dates": "2025-08-15 to 2025-08-20", 
-    "budget": 2000
-  },
-  "days": [
-    {
-      "theme": "Travel Day & Arrival",
-      "morning": "Departure from Mumbai",
-      "afternoon": "Journey to Paris and hotel check-in",
-      "evening": "Welcome dinner and local area exploration",
-      "budget": 150
-    }
-  ],
-  "summary": {
-    "total_estimated_cost": 730,
-    "remaining_budget": 1270
-  },
-  "tips": [
-    "Book accommodations in Paris in advance",
-    "Try local transportation for authentic experience"
-  ]
+  "status": "success",
+  "message": "Itinerary generated successfully",
+  "data": {
+    "travel_itinerary": {
+      "from_location": "Mumbai",
+      "to_location": "Paris",
+      "dates": "2025-08-15 to 2025-08-20",
+      "budget": 2000
+    },
+    "days": [
+      {
+        "theme": "Travel Day & Arrival",
+        "morning": "Departure from Mumbai",
+        "afternoon": "Journey to Paris and hotel check-in",
+        "evening": "Welcome dinner and local area exploration",
+        "budget": 150
+      }
+    ],
+    "summary": {
+      "total_estimated_cost": 730,
+      "remaining_budget": 1270
+    },
+    "tips": [
+      "Book accommodations in Paris in advance",
+      "Try local transportation for authentic experience"
+    ]
+  }
 }
 ```
 
+#### Error Example (400 Bad Request)
+```json
+{
+  "status": "error",
+  "message": "Failed to generate itinerary: Invalid input parameters"
+}
+```
+
+#### Status Codes
+- `200 OK`: Successful GET requests
+- `201 Created`: Resource created (e.g., itinerary generated)
+- `400 Bad Request`: Invalid input or request
+- `401 Unauthorized`: Authentication required or failed
+- `404 Not Found`: Resource not found
+- `500 Internal Server Error`: Unexpected server error
+
+#### Notes for Frontend
+- Always check the `status` and `message` fields in the response.
+- Use the HTTP status code to determine the result of the request.
 ## 🛠️ Admin Tools
 
 ### User Management CLI
