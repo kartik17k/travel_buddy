@@ -164,7 +164,9 @@ async def get_my_itineraries(
                 },
                 tips=itinerary.tips
             )
-            response_list.append(response.dict())
+            itinerary_dict = response.dict()
+            itinerary_dict["id"] = str(itinerary.id)
+            response_list.append(itinerary_dict)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
@@ -233,12 +235,14 @@ async def get_itinerary(
             },
             tips=itinerary.tips
         )
+        itinerary_dict = response.dict()
+        itinerary_dict["id"] = str(itinerary.id)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "status": "success",
                 "message": "Fetched itinerary successfully",
-                "data": response.dict()
+                "data": itinerary_dict
             }
         )
     except Exception as e:

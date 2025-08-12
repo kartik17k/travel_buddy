@@ -75,6 +75,12 @@ async def login_user(login_data: LoginRequest, _: None = Depends(require_mongodb
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
+    user_data = {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "created_at": user.created_at.isoformat() if user.created_at else None
+    }
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -82,7 +88,8 @@ async def login_user(login_data: LoginRequest, _: None = Depends(require_mongodb
             "message": "Login successful",
             "data": {
                 "access_token": access_token,
-                "token_type": "bearer"
+                "token_type": "bearer",
+                "user": user_data
             }
         }
     )
