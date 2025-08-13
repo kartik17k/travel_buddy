@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
@@ -54,6 +55,9 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json"
     )
     
+    # Serve static frontend files from dist at root
+    app.mount("/", StaticFiles(directory="dist", html=True), name="static")
+
     # CORS Middleware for development
     app.add_middleware(
         CORSMiddleware,
@@ -87,8 +91,8 @@ def create_app() -> FastAPI:
             "database": "MongoDB"
         }
     
-    # Root endpoint
-    @app.get("/")
+    # Root API endpoint (kept for API info)
+    @app.get("/api-info")
     async def root():
         """Root endpoint with API information."""
         from app.core.database import is_mongodb_connected
@@ -118,7 +122,7 @@ def create_app() -> FastAPI:
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url="/redoc")
     
-    # Register all routes
+    # Register all API routes
     app.include_router(api_router)
     
     return app
@@ -126,8 +130,3 @@ def create_app() -> FastAPI:
 
 # Create the app instance
 app = create_app()
-
-
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
