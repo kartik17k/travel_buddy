@@ -54,7 +54,8 @@ async def generate_itinerary(
                 travel_itinerary={
                     "from_location": request.from_location,
                     "to_location": request.to_location,
-                    "dates": request.dates,  # Use new dates
+                    "from_date": request.from_date,
+                    "to_date": request.to_date,
                     "budget": request.budget  # Use new budget
                 },
                 days=[
@@ -145,7 +146,8 @@ async def get_my_itineraries(
                 travel_itinerary={
                     "from_location": itinerary.travel_itinerary.from_location,
                     "to_location": itinerary.travel_itinerary.to_location,
-                    "dates": itinerary.travel_itinerary.dates,
+                    "from_date": itinerary.travel_itinerary.from_date,
+                    "to_date": itinerary.travel_itinerary.to_date,
                     "budget": itinerary.travel_itinerary.budget
                 },
                 days=[
@@ -216,7 +218,8 @@ async def get_itinerary(
             travel_itinerary={
                 "from_location": itinerary.travel_itinerary.from_location,
                 "to_location": itinerary.travel_itinerary.to_location,
-                "dates": itinerary.travel_itinerary.dates,
+                "from_date": itinerary.travel_itinerary.from_date,
+                "to_date": itinerary.travel_itinerary.to_date,
                 "budget": itinerary.travel_itinerary.budget
             },
             days=[

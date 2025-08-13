@@ -17,10 +17,14 @@ class TravelSummary(BaseModel):
     remaining_budget: float
 
 
+
+from datetime import date
+
 class TravelItinerary(BaseModel):
     from_location: str
     to_location: str
-    dates: str
+    from_date: date
+    to_date: date
     budget: float
 
 

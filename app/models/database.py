@@ -10,7 +10,7 @@ from pymongo import IndexModel
 class User(Document):
     """User document model for MongoDB."""
     
-    email: Indexed(EmailStr, unique=True)  # Unique email index
+    email: Indexed(EmailStr, unique=True)  # type: ignore # Unique email index
     hashed_password: str
     full_name: Optional[str] = None
     is_active: bool = True
@@ -51,32 +51,34 @@ class ItinerarySummary(BaseModel):
     remaining_budget: float
 
 
+from datetime import date
+
 class TravelItineraryInfo(BaseModel):
     """Basic travel information."""
-    
     from_location: str
     to_location: str
-    dates: str
+    from_date: date
+    to_date: date
     budget: float
 
 
 class Itinerary(Document):
     """Itinerary document model for MongoDB."""
-    
     user_id: Optional[str] = None  # Reference to User document
     from_location: str
     to_location: str
-    dates: str
+    from_date: date
+    to_date: date
     budget: float
     model_used: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     # Itinerary content (stored as embedded documents)
     travel_itinerary: TravelItineraryInfo
     days: List[ItineraryDay]
     summary: ItinerarySummary
     tips: List[str] = []
-    
+
     # Additional metadata
     generation_time_ms: Optional[float] = None
     prompt_tokens: Optional[int] = None

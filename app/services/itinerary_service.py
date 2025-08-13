@@ -24,7 +24,8 @@ class ItineraryService:
         travel_itinerary = TravelItineraryInfo(
             from_location=itinerary_response.travel_itinerary.from_location,
             to_location=itinerary_response.travel_itinerary.to_location,
-            dates=itinerary_response.travel_itinerary.dates,
+            from_date=itinerary_response.travel_itinerary.from_date,
+            to_date=itinerary_response.travel_itinerary.to_date,
             budget=itinerary_response.travel_itinerary.budget
         )
         
@@ -49,7 +50,8 @@ class ItineraryService:
             user_id=user_id,
             from_location=itinerary_request.from_location,
             to_location=itinerary_request.to_location,
-            dates=itinerary_request.dates,
+            from_date=itinerary_request.from_date,
+            to_date=itinerary_request.to_date,
             budget=itinerary_request.budget,
             model_used=itinerary_request.model,
             travel_itinerary=travel_itinerary,
