@@ -1,3 +1,5 @@
+
+import logging
 from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
@@ -18,18 +20,20 @@ async def register_user(user: UserCreate, _: None = Depends(require_mongodb)):
     """Register a new user."""
     try:
         db_user = await user_service.create_user(user)
+        user_id = getattr(db_user, 'id', None) or getattr(db_user, '_id', None)
+        created_at = db_user.created_at.isoformat() if db_user.created_at else None
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
             content={
                 "status": "success",
                 "message": "User registered successfully",
-                "data": UserResponse(
-                    id=str(db_user.id),
-                    email=db_user.email,
-                    full_name=db_user.full_name,
-                    is_active=db_user.is_active,
-                    created_at=db_user.created_at
-                ).dict()
+                "data": {
+                    "id": str(user_id),
+                    "email": db_user.email,
+                    "full_name": db_user.full_name,
+                    "is_active": db_user.is_active,
+                    "created_at": created_at
+                }
             }
         )
     except ValueError as e:
@@ -41,11 +45,14 @@ async def register_user(user: UserCreate, _: None = Depends(require_mongodb)):
             }
         )
     except Exception as e:
+        import traceback
+        logger = logging.getLogger("register_user")
+        logger.error(f"Registration failed: {e}\n{traceback.format_exc()}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": "error",
-                "message": "Failed to create user account"
+                "message": f"Failed to create user account: {str(e)}"
             }
         )
 
