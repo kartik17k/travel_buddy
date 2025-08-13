@@ -10,7 +10,7 @@ from pymongo import IndexModel
 class User(Document):
     """User document model for MongoDB."""
     
-    email: Indexed(EmailStr, unique=True)  # Unique email index
+    email: Indexed(EmailStr, unique=True)  # type: ignore # Unique email index
     hashed_password: str
     full_name: Optional[str] = None
     is_active: bool = True
