@@ -59,14 +59,14 @@ class GroqService:
                 raise HTTPException(status_code=500, detail=f"Groq API error: {str(e)}")
     
     def _create_prompt(self, request: ItineraryRequest) -> str:
-        """Create a prompt for Groq to generate an itinerary."""
+        """Create a prompt for Groq to generate an itinerary in INR."""
         return f"""
         Create a detailed travel itinerary in JSON format for the following trip:
 
         From: {request.from_location}
         To: {request.to_location}
         Dates: {request.dates}
-        Budget: ${request.budget} USD
+        Budget: ₹{request.budget} INR
 
         Please return a JSON response with the following structure:
         {{
@@ -82,12 +82,12 @@ class GroqService:
                     "morning": "Morning activity",
                     "afternoon": "Afternoon activity", 
                     "evening": "Evening activity",
-                    "budget": 150
+                    "budget": 1500
                 }}
             ],
             "summary": {{
-                "total_estimated_cost": 750,
-                "remaining_budget": {request.budget - 750}
+                "total_estimated_cost": 7500,
+                "remaining_budget": {request.budget - 7500}
             }},
             "tips": ["Tip 1", "Tip 2", "Tip 3"]
         }}
